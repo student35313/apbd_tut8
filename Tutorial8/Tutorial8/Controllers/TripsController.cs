@@ -18,7 +18,7 @@ namespace Tutorial8.Controllers
         [HttpGet]
         public async Task<IActionResult> GetTrips()
         {
-            var trips = await _tripsService.GetTrips();
+            var trips = await _tripsService.GetAllTrips();
             return Ok(trips);
         }
 
