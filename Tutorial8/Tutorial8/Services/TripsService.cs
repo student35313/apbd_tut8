@@ -17,6 +17,6 @@ public class TripsService : ITripsService
 
     public async Task<List<TripDTO>> GetAllTrips()
     {
-        return await _tripsRepository.GetTrips(-1);
+        return await _tripsRepository.GetTripsAsync(-1);
     }
 }

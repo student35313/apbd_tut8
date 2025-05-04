@@ -17,16 +17,35 @@ public class ClientsService : IClientsService
 
     public async Task<List<TripDTO>> GetClientTrips(int clientId)
     { 
-        var cient = await _clientsRepository.GetClient(clientId);
-        if (cient == null)
+        if (! await _clientsRepository.ClientExistsAsync(clientId))
         {
            throw new NotFoundException("Client not found with this id");
         }
-        if (!await _clientsRepository.HasTrips(clientId))
+        if (! await _clientsRepository.HasTripsAsync(clientId))
         {
             return new List<TripDTO>();
         }
-        return await _tripsRepository.GetTrips(clientId);
+        return await _tripsRepository.GetTripsAsync(clientId);
             
+    }
+
+    public async Task<int> AddClient(ClientCreationDTO client)
+    {
+        if (string.IsNullOrWhiteSpace(client.FirstName) ||
+            string.IsNullOrWhiteSpace(client.LastName) ||
+            string.IsNullOrWhiteSpace(client.Email))
+        {
+            throw new FormatException("FirstName, LastName and Email are required.");
+        }
+        try
+        {
+            var _ = new System.Net.Mail.MailAddress(client.Email);
+        }
+        catch
+        {
+            throw new FormatException("Email format is invalid.");
+        }
+        return  await _clientsRepository.CreateClientAsync(client);
+        
     }
 }

@@ -13,69 +13,139 @@ public class TripsRepository : ITripsRepository
         _connectionString = configuration.GetConnectionString("Default");
     }
 
-    public async Task<List<TripDTO>> GetTrips(int clientId = -1)
+    public async Task<List<TripDTO>> GetTripsAsync(int clientId = -1)
     {
         var trips = new List<TripDTO>();
 
-        using var conn = new SqlConnection(_connectionString);
-        await conn.OpenAsync();
-        
-        string tripsCommand;
-        if (clientId > 0)
+        using (var conn = new SqlConnection(_connectionString))
         {
-            tripsCommand = @"
+            await conn.OpenAsync();
+
+            string tripsCommand;
+            if (clientId > 0)
+            {
+                tripsCommand = @"
                 SELECT t.IdTrip, t.Name, t.Description, t.DateFrom, t.DateTo, t.MaxPeople
                 FROM Trip t
                 JOIN Client_Trip ct ON t.IdTrip = ct.IdTrip
                 WHERE ct.IdClient = @IdClient";
-        }
-        else
-        {
-            tripsCommand = @"
+            }
+            else
+            {
+                tripsCommand = @"
                 SELECT IdTrip, Name, Description, DateFrom, DateTo, MaxPeople
                 FROM Trip";
-        }
-        using (var cmd = new SqlCommand(tripsCommand, conn))
-        {
-            if (clientId > 0)
-            {
-                cmd.Parameters.AddWithValue("@IdClient", clientId);
             }
-        using (var reader = await cmd.ExecuteReaderAsync())
-        {
-            while (await reader.ReadAsync())
+
+            using (var cmd = new SqlCommand(tripsCommand, conn))
             {
-                trips.Add(new TripDTO
+                if (clientId > 0)
                 {
-                    IdTrip      = reader.GetInt32(0),
-                    Name        = reader.GetString(1),
-                    Description = reader.IsDBNull(2) ? null : reader.GetString(2),
-                    DateFrom    = reader.GetDateTime(3),
-                    DateTo      = reader.GetDateTime(4),
-                    MaxPeople   = reader.GetInt32(5),
-                });
+                    cmd.Parameters.AddWithValue("@IdClient", clientId);
+                }
+
+                using (var reader = await cmd.ExecuteReaderAsync())
+                {
+                    while (await reader.ReadAsync())
+                    {
+                        trips.Add(new TripDTO
+                        {
+                            IdTrip = reader.GetInt32(0),
+                            Name = reader.GetString(1),
+                            Description = reader.IsDBNull(2) ? null : reader.GetString(2),
+                            DateFrom = reader.GetDateTime(3),
+                            DateTo = reader.GetDateTime(4),
+                            MaxPeople = reader.GetInt32(5),
+                        });
+                    }
+                }
             }
-        }
-        }
-        
-        string countriesCommand = @"SELECT c.Name 
+
+            string countriesCommand = @"SELECT c.Name 
                                     FROM Country_Trip ct 
                                     JOIN Country c ON c.IdCountry = ct.IdCountry    
                                     WHERE ct.IdTrip = @IdTrip";
-        using var countryCmd = new SqlCommand(countriesCommand, conn);
-        countryCmd.Parameters.Add("@IdTrip", SqlDbType.Int);
-
-        foreach (var trip in trips)
-        {
-            countryCmd.Parameters["@IdTrip"].Value = trip.IdTrip;
-            using var rdr = await countryCmd.ExecuteReaderAsync();
-            while (await rdr.ReadAsync())
+            using (var countryCmd = new SqlCommand(countriesCommand, conn))
             {
-                trip.Countries.Add(rdr.GetString(0));
+
+                countryCmd.Parameters.Add("@IdTrip", SqlDbType.Int);
+
+                foreach (var trip in trips)
+                {
+                    countryCmd.Parameters["@IdTrip"].Value = trip.IdTrip;
+                    using var rdr = await countryCmd.ExecuteReaderAsync();
+                    while (await rdr.ReadAsync())
+                    {
+                        trip.Countries.Add(rdr.GetString(0));
+                    }
+
+                    await rdr.CloseAsync();
+                }
             }
-            await rdr.CloseAsync();
         }
 
         return trips;
+    }
+
+    public async Task<bool> TripExistsAsync(int tripId)
+    {
+        using (var conn = new SqlConnection(_connectionString))
+        {
+            await conn.OpenAsync();
+
+            const string command = @"
+            SELECT 1 FROM Trip
+            WHERE IdTrip = @IdTrip";
+
+            using (var cmd = new SqlCommand(command, conn))
+            {
+                cmd.Parameters.AddWithValue("@IdTrip", tripId);
+
+                using (var reader = await cmd.ExecuteReaderAsync())
+                {
+                    if (await reader.ReadAsync())
+                    {
+                        return true;
+                    }
+                }
+            }
+        }
+
+        return false;
+    }
+
+    public async Task<bool> IsFullAsync(int tripId)
+    {
+        {
+            using (var conn = new SqlConnection(_connectionString))
+            {
+                await conn.OpenAsync();
+
+                const string sql = @"
+            SELECT 
+                t.MaxPeople,
+                (SELECT COUNT(*) FROM Client_Trip WHERE IdTrip = @IdTrip) AS CurrentCount
+            FROM Trip t
+            WHERE t.IdTrip = @IdTrip";
+
+                using (var cmd = new SqlCommand(sql, conn))
+                {
+                    cmd.Parameters.AddWithValue("@IdTrip", tripId);
+
+                    using (var reader = await cmd.ExecuteReaderAsync())
+                    {
+                        if (await reader.ReadAsync())
+                        {
+                            int maxPeople = reader.GetInt32(0);
+                            int currentCount = reader.GetInt32(1);
+
+                            return currentCount < maxPeople;
+                        }
+                    }
+                }
+            }
+            
+        }
+        return false;
     }
 }

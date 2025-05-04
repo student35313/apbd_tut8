@@ -5,6 +5,8 @@ namespace Tutorial8.Repositories;
 
 public interface IClientsRepository
 {
-    Task<ClientDTO> GetClient(int clientId);
-    Task<bool> HasTrips(int clientId);
+    Task<ClientDTO> GetClientAsync(int clientId);
+    Task<bool> HasTripsAsync(int clientId);
+    Task<int> CreateClientAsync(ClientCreationDTO client);
+    Task<bool> ClientExistsAsync(int clientId);
 }

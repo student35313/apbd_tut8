@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using Tutorial8.Exceptions;
+using Tutorial8.Models.DTOs;
 using Tutorial8.Services;
 
 namespace Tutorial8.Controllers;
@@ -27,7 +28,27 @@ public class ClientsController : ControllerBase
         {
             return NotFound(new { error = ex.Message });
         }
-        catch (Exception)
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+            return StatusCode(StatusCodes.Status500InternalServerError, 
+                new { error = "Internal server error" });
+        }
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> AddClient(ClientCreationDTO client)
+    {
+        try
+        {
+            var created = await _clientsService.AddClient(client);
+            return Created("", created);
+        }
+        catch (FormatException e)
+        {
+            return BadRequest(new { error = e.Message });
+        }
+        catch (Exception e)
         {
             return StatusCode(StatusCodes.Status500InternalServerError, 
                 new { error = "Internal server error" });
