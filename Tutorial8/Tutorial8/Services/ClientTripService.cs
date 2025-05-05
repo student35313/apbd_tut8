@@ -20,18 +20,28 @@ public class ClientTripService : IClientTripService
     public async Task<bool> AssignTrip(int clientId, int tripId)
     {
         if (! await _clientsRepository.ClientExistsAsync(clientId))
-        {
             throw new NotFoundException("Client not found with this id");
-        }
+        
         if (! await _tripsRepository.TripExistsAsync(tripId))
-        {
             throw new NotFoundException("Trip not found with this id");
-        }
 
         if (!await _tripsRepository.IsFullAsync(tripId))
-        {
             throw new BadHttpRequestException("Trip is full");
-        }
         return await _clientTripRepository.AssignTripAsync(clientId, tripId);
     }
+    
+    public async Task<bool> UnassignTrip(int clientId, int tripId)
+    {
+        if (!await _clientsRepository.ClientExistsAsync(clientId))
+            throw new NotFoundException("Client not found with this id");
+        
+        if (!await _tripsRepository.TripExistsAsync(tripId))
+            throw new NotFoundException("Trip not found with this id");
+        
+        if (!await _clientTripRepository.RegistrationExistsAsync(clientId, tripId))
+            throw new NotFoundException("Registration not found");
+        
+        return await _clientTripRepository.UnassignTripAsync(clientId, tripId);
+    }
+    
 }

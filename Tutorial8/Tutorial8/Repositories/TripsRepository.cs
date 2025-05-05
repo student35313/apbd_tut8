@@ -17,71 +17,58 @@ public class TripsRepository : ITripsRepository
     {
         var trips = new List<TripDTO>();
 
-        using (var conn = new SqlConnection(_connectionString))
-        {
-            await conn.OpenAsync();
+        await using var conn = new SqlConnection(_connectionString);
+        await conn.OpenAsync();
 
-            string tripsCommand;
-            if (clientId > 0)
-            {
-                tripsCommand = @"
+        var tripsCommand = clientId > 0 ? @"
                 SELECT t.IdTrip, t.Name, t.Description, t.DateFrom, t.DateTo, t.MaxPeople
                 FROM Trip t
                 JOIN Client_Trip ct ON t.IdTrip = ct.IdTrip
-                WHERE ct.IdClient = @IdClient";
-            }
-            else
-            {
-                tripsCommand = @"
+                WHERE ct.IdClient = @IdClient" : @"
                 SELECT IdTrip, Name, Description, DateFrom, DateTo, MaxPeople
                 FROM Trip";
-            }
 
-            using (var cmd = new SqlCommand(tripsCommand, conn))
+        await using var cmd = new SqlCommand(tripsCommand, conn);
+        
+            if (clientId > 0)
             {
-                if (clientId > 0)
-                {
-                    cmd.Parameters.AddWithValue("@IdClient", clientId);
-                }
+                cmd.Parameters.AddWithValue("@IdClient", clientId);
+            }
 
-                using (var reader = await cmd.ExecuteReaderAsync())
+            await using (var reader = await cmd.ExecuteReaderAsync())
+            {
+
+                while (await reader.ReadAsync())
                 {
-                    while (await reader.ReadAsync())
+                    trips.Add(new TripDTO
                     {
-                        trips.Add(new TripDTO
-                        {
-                            IdTrip = reader.GetInt32(0),
-                            Name = reader.GetString(1),
-                            Description = reader.IsDBNull(2) ? null : reader.GetString(2),
-                            DateFrom = reader.GetDateTime(3),
-                            DateTo = reader.GetDateTime(4),
-                            MaxPeople = reader.GetInt32(5),
-                        });
-                    }
+                        IdTrip = reader.GetInt32(0),
+                        Name = reader.GetString(1),
+                        Description = reader.IsDBNull(2) ? null : reader.GetString(2),
+                        DateFrom = reader.GetDateTime(3),
+                        DateTo = reader.GetDateTime(4),
+                        MaxPeople = reader.GetInt32(5),
+                    });
                 }
             }
 
-            string countriesCommand = @"SELECT c.Name 
+            const string countriesCommand = @"SELECT c.Name 
                                     FROM Country_Trip ct 
                                     JOIN Country c ON c.IdCountry = ct.IdCountry    
                                     WHERE ct.IdTrip = @IdTrip";
-            using (var countryCmd = new SqlCommand(countriesCommand, conn))
+        await using var countryCmd = new SqlCommand(countriesCommand, conn);
+        countryCmd.Parameters.Add("@IdTrip", SqlDbType.Int);
+
+        foreach (var trip in trips)
+        {
+            countryCmd.Parameters["@IdTrip"].Value = trip.IdTrip;
+            await using var rdr = await countryCmd.ExecuteReaderAsync();
+            while (await rdr.ReadAsync())
             {
-
-                countryCmd.Parameters.Add("@IdTrip", SqlDbType.Int);
-
-                foreach (var trip in trips)
-                {
-                    countryCmd.Parameters["@IdTrip"].Value = trip.IdTrip;
-                    using var rdr = await countryCmd.ExecuteReaderAsync();
-                    while (await rdr.ReadAsync())
-                    {
-                        trip.Countries.Add(rdr.GetString(0));
-                    }
-
-                    await rdr.CloseAsync();
-                }
+                trip.Countries.Add(rdr.GetString(0));
             }
+
+            await rdr.CloseAsync();
         }
 
         return trips;
@@ -89,62 +76,44 @@ public class TripsRepository : ITripsRepository
 
     public async Task<bool> TripExistsAsync(int tripId)
     {
-        using (var conn = new SqlConnection(_connectionString))
-        {
-            await conn.OpenAsync();
+        await using var conn = new SqlConnection(_connectionString);
+        await conn.OpenAsync();
 
-            const string command = @"
+        const string command = @"
             SELECT 1 FROM Trip
             WHERE IdTrip = @IdTrip";
 
-            using (var cmd = new SqlCommand(command, conn))
-            {
-                cmd.Parameters.AddWithValue("@IdTrip", tripId);
+        await using var cmd = new SqlCommand(command, conn);
+        cmd.Parameters.AddWithValue("@IdTrip", tripId);
 
-                using (var reader = await cmd.ExecuteReaderAsync())
-                {
-                    if (await reader.ReadAsync())
-                    {
-                        return true;
-                    }
-                }
-            }
-        }
-
-        return false;
+        await using var reader = await cmd.ExecuteReaderAsync();
+        return await reader.ReadAsync();
     }
 
     public async Task<bool> IsFullAsync(int tripId)
     {
         {
-            using (var conn = new SqlConnection(_connectionString))
-            {
-                await conn.OpenAsync();
+            await using var conn = new SqlConnection(_connectionString);
+            await conn.OpenAsync();
 
-                const string sql = @"
+            const string sql = @"
             SELECT 
                 t.MaxPeople,
                 (SELECT COUNT(*) FROM Client_Trip WHERE IdTrip = @IdTrip) AS CurrentCount
             FROM Trip t
             WHERE t.IdTrip = @IdTrip";
 
-                using (var cmd = new SqlCommand(sql, conn))
-                {
-                    cmd.Parameters.AddWithValue("@IdTrip", tripId);
+            await using var cmd = new SqlCommand(sql, conn);
+            cmd.Parameters.AddWithValue("@IdTrip", tripId);
 
-                    using (var reader = await cmd.ExecuteReaderAsync())
-                    {
-                        if (await reader.ReadAsync())
-                        {
-                            int maxPeople = reader.GetInt32(0);
-                            int currentCount = reader.GetInt32(1);
+            await using var reader = await cmd.ExecuteReaderAsync();
+            if (await reader.ReadAsync())
+            {
+                var maxPeople = reader.GetInt32(0);
+                var currentCount = reader.GetInt32(1);
 
-                            return currentCount < maxPeople;
-                        }
-                    }
-                }
+                return currentCount < maxPeople;
             }
-            
         }
         return false;
     }

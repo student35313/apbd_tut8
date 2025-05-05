@@ -28,9 +28,9 @@ public class ClientsController : ControllerBase
         {
             return NotFound(new { error = ex.Message });
         }
-        catch (Exception e)
+        catch (Exception ex)
         {
-            Console.WriteLine(e);
+            Console.WriteLine(ex);
             return StatusCode(StatusCodes.Status500InternalServerError, 
                 new { error = "Internal server error" });
         }
@@ -44,11 +44,11 @@ public class ClientsController : ControllerBase
             var created = await _clientsService.AddClient(client);
             return Created("", created);
         }
-        catch (FormatException e)
+        catch (FormatException ex)
         {
-            return BadRequest(new { error = e.Message });
+            return BadRequest(new { error = ex.Message });
         }
-        catch (Exception e)
+        catch (Exception ex)
         {
             return StatusCode(StatusCodes.Status500InternalServerError, 
                 new { error = "Internal server error" });

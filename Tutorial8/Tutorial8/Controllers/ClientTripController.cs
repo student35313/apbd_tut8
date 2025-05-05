@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Tutorial8.Exceptions;
 using Tutorial8.Services;
@@ -22,8 +23,8 @@ public class ClientTripController : ControllerBase
         {
             var success = await _clientTripService.AssignTrip(clientId, tripId);
             if (!success)
-                return StatusCode(StatusCodes.Status500InternalServerError, 
-                    new { error = "Could not assign trip" });
+                return StatusCode(StatusCodes.Status500InternalServerError,
+                    new { error = "Could not assign client to trip" });
 
             return Ok();
         }
@@ -38,8 +39,32 @@ public class ClientTripController : ControllerBase
         catch (Exception ex)
         {
             Console.WriteLine(ex);
-            return StatusCode(StatusCodes.Status500InternalServerError, 
+            return StatusCode(StatusCodes.Status500InternalServerError,
                 new { error = "Internal server error" });
         }
     }
+
+    [HttpDelete("{tripId}")]
+    public async Task<IActionResult> UnassignTrip(int clientId, int tripId)
+    {
+        try
+        {
+            var success = await _clientTripService.UnassignTrip(clientId, tripId);
+            if (!success)
+                return StatusCode(StatusCodes.Status500InternalServerError,
+                    new { error = "Could not unassign client from trip" });
+            return Ok();
+        }
+        catch (NotFoundException ex)
+        {
+            return NotFound(new { error = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine(ex);
+            return StatusCode(StatusCodes.Status500InternalServerError, new { error = "Internal server error" });
+        }
+    }
+    
+    
 }
