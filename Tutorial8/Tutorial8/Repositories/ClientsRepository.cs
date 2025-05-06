@@ -13,15 +13,16 @@ public class ClientsRepository : IClientsRepository
         _connectionString = configuration.GetConnectionString("Default");
     }
     
+    // Returns a client with the given id
     public async Task<ClientDTO> GetClientAsync(int clientId)
     {
         ClientDTO client = null;
 
         await using var conn = new SqlConnection(_connectionString);
         await conn.OpenAsync();
-
+        
         const string command = @"
-            SELECT IdClient, FirstName, LastName, Email, Telephone, Pesel
+            SELECT *
             FROM Client
             WHERE IdClient = @IdClient";
 
@@ -44,7 +45,8 @@ public class ClientsRepository : IClientsRepository
         }
         return client;
     }
-
+    
+    // Checks if the client has any trips assigned
     public async Task<bool> HasTripsAsync(int clientId)
     {
         await using var conn = new SqlConnection(_connectionString);
@@ -61,6 +63,7 @@ public class ClientsRepository : IClientsRepository
         return await reader.ReadAsync();
     }
 
+    // Creates a new client in the database
     public async Task<int> CreateClientAsync(ClientCreationDTO client)
     {
         await using var conn = new SqlConnection(_connectionString);
@@ -93,6 +96,7 @@ public class ClientsRepository : IClientsRepository
         }
     }
 
+    // Checks if the client with the given id exists in the database
     public async Task<bool> ClientExistsAsync(int clientId)
     {
         {

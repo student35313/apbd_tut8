@@ -15,6 +15,7 @@ namespace Tutorial8.Controllers
             _tripsService = tripsService;
         }
 
+        // Returns a list of all existing trips
         [HttpGet]
         public async Task<IActionResult> GetTrips()
         {

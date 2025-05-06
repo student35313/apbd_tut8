@@ -31,20 +31,7 @@ public class ClientsService : IClientsService
 
     public async Task<int> AddClient(ClientCreationDTO client)
     {
-        if (string.IsNullOrWhiteSpace(client.FirstName) ||
-            string.IsNullOrWhiteSpace(client.LastName) ||
-            string.IsNullOrWhiteSpace(client.Email))
-        {
-            throw new FormatException("FirstName, LastName and Email are required.");
-        }
-        try
-        {
-            var _ = new System.Net.Mail.MailAddress(client.Email);
-        }
-        catch
-        {
-            throw new FormatException("Email format is invalid.");
-        }
+        
         return  await _clientsRepository.CreateClientAsync(client);
         
     }

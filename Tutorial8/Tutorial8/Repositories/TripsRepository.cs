@@ -13,6 +13,9 @@ public class TripsRepository : ITripsRepository
         _connectionString = configuration.GetConnectionString("Default");
     }
 
+    /*  Returns a list of all trips from the database if clientId is -1,
+        otherwise returns trips of the client with the given id
+        First the trips are selected, then the countries of the trips are added */
     public async Task<List<TripDTO>> GetTripsAsync(int clientId = -1)
     {
         var trips = new List<TripDTO>();
@@ -74,6 +77,7 @@ public class TripsRepository : ITripsRepository
         return trips;
     }
 
+    // Checks if the trip with the given id exists in the database
     public async Task<bool> TripExistsAsync(int tripId)
     {
         await using var conn = new SqlConnection(_connectionString);
@@ -90,6 +94,7 @@ public class TripsRepository : ITripsRepository
         return await reader.ReadAsync();
     }
 
+    // Checks if the trip with the given id is has less people assigned than the maximum
     public async Task<bool> IsFullAsync(int tripId)
     {
         {

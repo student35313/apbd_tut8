@@ -16,11 +16,14 @@ public class ClientsController : ControllerBase
         _clientsService = clientsService;
     }
 
+    // Returns a list of trips of the client with the given id
     [HttpGet("{id}/trips")]
     public async Task<IActionResult> GetClientTrips(int id)
     {
         try
         {
+            if (id <= 0)
+                return BadRequest(new { error = "Ids must be positive." });
             var trips = await _clientsService.GetClientTrips(id);
             return Ok(trips);
         }
@@ -36,6 +39,7 @@ public class ClientsController : ControllerBase
         }
     }
 
+    // Adds a new client to the database from the special DTO
     [HttpPost]
     public async Task<IActionResult> AddClient(ClientCreationDTO client)
     {

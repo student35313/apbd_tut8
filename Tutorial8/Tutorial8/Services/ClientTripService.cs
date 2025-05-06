@@ -25,8 +25,11 @@ public class ClientTripService : IClientTripService
         if (! await _tripsRepository.TripExistsAsync(tripId))
             throw new NotFoundException("Trip not found with this id");
 
+        if (await _clientTripRepository.RegistrationExistsAsync(clientId, tripId))
+            throw new ConflictException("Client already registered for this trip");
+        
         if (!await _tripsRepository.IsFullAsync(tripId))
-            throw new BadHttpRequestException("Trip is full");
+            throw new ConflictException("Trip is full");
         return await _clientTripRepository.AssignTripAsync(clientId, tripId);
     }
     

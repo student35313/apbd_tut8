@@ -11,6 +11,7 @@ public class ClientTripRepository : IClientTripRepository
         _connectionString = configuration.GetConnectionString("Default");
     }
 
+    // Assigns a trip to the client through the Client_Trip table
     public async Task<bool> AssignTripAsync(int clientId, int tripId)
     {
         await using var con = new SqlConnection(_connectionString);
@@ -44,6 +45,7 @@ public class ClientTripRepository : IClientTripRepository
         }
     }
     
+    // Unassigns a trip from the client through the Client_Trip table
     public async Task<bool> UnassignTripAsync(int clientId, int tripId)
     {
         await using var conn = new SqlConnection(_connectionString);
@@ -77,6 +79,7 @@ public class ClientTripRepository : IClientTripRepository
         }
     }
 
+    // Checks if the client has already registered for the trip
     public async Task<bool> RegistrationExistsAsync(int clientId, int tripId)
     {
         await using var conn = new SqlConnection(_connectionString);

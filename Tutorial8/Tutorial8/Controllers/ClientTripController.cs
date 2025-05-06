@@ -16,11 +16,14 @@ public class ClientTripController : ControllerBase
         _clientTripService = clientTripService;
     }
 
+    // Assigns a client to a trip in a Client_Trip table
     [HttpPut("{tripId}")]
     public async Task<IActionResult> AssignTrip(int clientId, int tripId)
     {
         try
         {
+            if (clientId <= 0 || tripId <= 0)
+                return BadRequest(new { error = "Ids must be positive." });
             var success = await _clientTripService.AssignTrip(clientId, tripId);
             if (!success)
                 return StatusCode(StatusCodes.Status500InternalServerError,
@@ -32,9 +35,9 @@ public class ClientTripController : ControllerBase
         {
             return NotFound(new { error = ex.Message });
         }
-        catch (BadHttpRequestException ex)
+        catch (ConflictException ex)
         {
-            return BadRequest(new { error = ex.Message });
+            return Conflict(new { error = ex.Message });
         }
         catch (Exception ex)
         {
@@ -43,12 +46,15 @@ public class ClientTripController : ControllerBase
                 new { error = "Internal server error" });
         }
     }
-
+    
+    // Unassigns a client from a trip in a Client_Trip table(delete a record)
     [HttpDelete("{tripId}")]
     public async Task<IActionResult> UnassignTrip(int clientId, int tripId)
     {
         try
         {
+            if (clientId <= 0 || tripId <= 0)
+                return BadRequest(new { error = "Ids must be positive." });
             var success = await _clientTripService.UnassignTrip(clientId, tripId);
             if (!success)
                 return StatusCode(StatusCodes.Status500InternalServerError,
